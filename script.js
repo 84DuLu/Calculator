@@ -3,7 +3,8 @@ let memoryOperator = ''
 let processedNum = null;
 let operator = '';
 let displayValue = `${memoryNum}`;
-let euqalActice = false;
+let euqalActive = false;
+let isRestricted = true;
 
 const screen = document.querySelector(".screen");
 const topDisplay = document.getElementById("topDisplay");
@@ -15,12 +16,25 @@ const equalBtn = document.getElementById('equalBtn');
 const numberBtns = document.querySelectorAll(".numberBtn");
 const operatorBtns = document.querySelectorAll(".operatorBtn");
 
-clearBtn.addEventListener('click', clear);
-deleteBtn.addEventListener('click', del);
-dotBtn.addEventListener('click', dotDisplay);
-equalBtn.addEventListener('click', equalBtnClick);
-numberBtns.forEach((numberBtn) => numberBtn.addEventListener('click', screenDisplay));
-operatorBtns.forEach((operatorBtn) => operatorBtn.addEventListener('click', operatorBtnClick));
+clearBtn.addEventListener('mousedown', clear);
+deleteBtn.addEventListener('mousedown', del);
+dotBtn.addEventListener('mousedown', dotDisplay);
+equalBtn.addEventListener('mousedown', equalBtnClick);
+numberBtns.forEach((numberBtn) => numberBtn.addEventListener('mousedown', screenDisplay));
+operatorBtns.forEach((operatorBtn) => operatorBtn.addEventListener('mousedown', operatorBtnClick));
+document.body.addEventListener('mousedown', () => {
+  if (topDisplay.textContent.length > 25) {
+    topDisplay.style.fontSize = '1rem';
+  } else {
+    topDisplay.style.fontSize = '1.5rem';
+  }
+
+  if (bottomDisplay.textContent.length > 14) {
+    bottomDisplay.style.fontSize = '2rem';
+  } else {
+    bottomDisplay.style.fontSize = '3rem';
+  }
+});
 
 function add(a, b) {
   return a + b;
@@ -59,17 +73,25 @@ function operate (num1, num2, operator) {
     case '%': result = modular(num1, num2);
               break;
   }
+  if (!Number.isInteger(num1) || !Number.isInteger(num2) || (num1 % num2)) {
+    return Math.round(result * 10000) / 10000;
+  }
   return result;
 }
 
 function operatorBtnClick(e) {
   operator = e.target.textContent;
   screen.style.flexDirection = "column-reverse";
-  euqalActice = false;
+  screen.style.justifyContent = "space-around";
+  euqalActive = false;
+  isRestricted = false;
 
   if (processedNum !== null) {
     processedNum = +displayValue;
     memoryNum = operate(memoryNum, processedNum, memoryOperator);
+    if (memoryNum > 10 ** 20) {
+      memoryNum = memoryNum.toPrecision(6);
+    }
     processedNum = null;
     displayValue = `${memoryNum}`;
     bottomDisplay.textContent = displayValue;
@@ -86,22 +108,31 @@ function equalBtnClick() {
     const oldMemoryNum = memoryNum;
     processedNum = +displayValue;
     memoryNum = operate(memoryNum, processedNum, memoryOperator);
+    if (memoryNum > 10 ** 20) {
+      memoryNum = memoryNum.toPrecision(6);
+    }
     topDisplay.textContent = `${oldMemoryNum} ${operator} ${processedNum} = ${memoryNum}`;
     processedNum = null;
     displayValue = `${memoryNum}`;
     bottomDisplay.textContent = displayValue;
-    euqalActice = true;
+    euqalActive = true;
+    isRestricted = false;
   }
 }
 
 function screenDisplay (e) {
+  if (isRestricted === true && displayValue.length > 10 ) {
+    return;
+  }
+  isRestricted = true;
+
   if (displayValue === '0') {
     displayValue = '';
   }
 
   if (memoryOperator !== '' && processedNum === null) {
-    if (euqalActice === true) {
-      euqalActice = false;
+    if (euqalActive === true) {
+      euqalActive = false;
       clear();
       displayValue = e.target.textContent;
       bottomDisplay.textContent = displayValue;
@@ -123,15 +154,18 @@ function clear() {
   processedNum = null;
   operator = '';
   displayValue = `${memoryNum}`;
+  euqalActive = false;
+  isRestricted = false;  
   bottomDisplay.textContent = displayValue;
   topDisplay.textContent = '';
   screen.style.flexDirection = "column";
+  screen.style.justifyContent = "flex-end";
 }
 
 function dotDisplay () {
   if (memoryOperator !== '' && processedNum === null) {
-    if (euqalActice === true) {
-      euqalActice = false;
+    if (euqalActive === true) {
+      euqalActive = false;
       clear();
       displayValue = '0.';
       bottomDisplay.textContent = displayValue;
@@ -147,6 +181,10 @@ function dotDisplay () {
 }
 
 function del() {
+  if (euqalActive === true) {
+    return;
+  }
+
   if (displayValue.length === 1) {
     displayValue = '0';
   } else {
